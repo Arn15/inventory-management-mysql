@@ -67,7 +67,7 @@ python src/manage.py audit --limit 20
 ## Tests
 `python -m pytest -q`: 27 tests covering authentication and lockout, database privilege enforcement per role, audit logging, append-only audit trail, business rules through procedures, the grants/call-graph match, and the no-`eval` rule. They run against a real database and **reset it**, so use a test instance.
 
-Tested on MariaDB 10.11 (Linux). The Docker setup targets MySQL 8.4.
+Tested on MySQL 8.4 (Docker) and MariaDB 10.11: all 27 tests pass on both.
 
 ## Features (original system)
 - **Manufacturer:** define products and recipes, create product batches (consumes ingredient lots, checks expiry and incompatibilities, computes cost), reports (on-hand, nearly out of stock, almost expired), recall tracing.

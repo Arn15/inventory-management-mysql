@@ -1,0 +1,33 @@
+# Usage:
+#   cp .env.example .env            # then change every password
+#   docker compose up -d db
+#   docker compose run --rm app python src/manage.py init-db
+#   docker compose run --rm app     # interactive login
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ADMIN_PASSWORD:?set DB_ADMIN_PASSWORD in .env}
+      MYSQL_DATABASE: InventoryManagement
+    # no published port: the database is only reachable from the app container
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+volumes:
+  db_data:

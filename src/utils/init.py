@@ -1,55 +1,40 @@
-import os
-from utils import ConfigReader, DBUtils
+"""Run the SQL scripts that create the schema, procedures, triggers and seed data."""
+from __future__ import annotations
 
-def run_db_init_script(conn, config, script, delimiter =";"):
-    if config.get(script, {}).get("enabled", False):
-        script_path = config.get(script, {}).get("location", "")
+from pathlib import Path
 
-        if not script_path or not os.path.exists(script_path):
-            print(f"SQL script not found at: {script_path}")
-            return
+from utils import settings
 
-        try:
-            with open(script_path, "r") as file:
-                sql_script = file.read()
-
-            cursor = conn.cursor()
-
-            sql_script = sql_script.replace("DELIMITER " + delimiter, "").replace("DELIMITER ;", "")
-            statements = [stmt.strip() for stmt in sql_script.split(delimiter) if stmt.strip()]
-
-            for stmt in statements:
-                # print(f"Executing statement: {stmt}...")  # Print first 30 chars of the statement
-                cursor.execute(stmt)
-
-            conn.commit()
-            cursor.close()
-
-            print(f"Database initialized successfully using {script_path}")
-
-        except Exception as e:
-            print(f"Error initializing database, {script}: {e}")
+# (script, statement delimiter), in execution order
+SCRIPTS = [
+    ("data/ddl-tables.sql", ";"),
+    ("data/ddl-procedures.sql", "$$"),
+    ("data/ddl-triggers.sql", "//"),
+    ("data/ddl-audit.sql", "//"),
+    ("data/dml-initialise.sql", ";"),
+]
 
 
-def initialize_database():
-    print("Initializing database...")
-    config = ConfigReader.read_config("config/config.yaml", "database")
-    if config is None:
-        print("Failed to load configuration: database")
-        return None
-    
-    conn = DBUtils.create_connection(config)
-    if conn is None:
-        print("Failed to establish database connection.")
-        return None
-    
-    config = ConfigReader.read_config("config/config.yaml", "init")
-    if config is None:
-        print("Failed to load configuration: init")
-        return None
-    run_db_init_script(conn, config, "tables")
-    run_db_init_script(conn, config, "triggers", "//")
-    run_db_init_script(conn, config, "procedures", "$$")
-    run_db_init_script(conn, config, "data") 
-    return conn
-    
+def run_sql_script(conn, path: Path, delimiter: str = ";") -> None:
+    """Execute a script split on its DELIMITER. Raises on the first failing statement."""
+    sql = path.read_text()
+    sql = sql.replace("DELIMITER " + delimiter, "").replace("DELIMITER ;", "")
+    statements = [s.strip() for s in sql.split(delimiter) if s.strip()]
+    cursor = conn.cursor()
+    try:
+        for stmt in statements:
+            cursor.execute(stmt)
+            if cursor.with_rows:
+                cursor.fetchall()
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise RuntimeError(f"{path.name}: {e}\n--- statement ---\n{stmt[:300]}") from e
+    finally:
+        cursor.close()
+    print(f"  applied {path.name}")
+
+
+def create_schema(conn) -> None:
+    for script, delim in SCRIPTS:
+        run_sql_script(conn, settings.ROOT / script, delim)

@@ -1,25 +1,44 @@
-# database_utils.py
+"""Database connections and stored-procedure helper."""
+from __future__ import annotations
+
 import mysql.connector
 from mysql.connector import Error
 
-def create_connection(config=None):
-    """ Create a database connection """
-    print("Establishing database connection...")
-    try:
-        conn = mysql.connector.connect(
-            host=config.get("host", "localhost") if config else "localhost",
-            port=config.get("port", 3306) if config else 3306,
-            user=config.get("username", "root") if config else "root",
-            password=config.get("password", "") if config else "",
-            database=config.get("database", "InventoryManagement") if config else "InventoryManagement"
-        )
-        return conn
-    except Error as e:
-        print(f"Error connecting to MySQL: {e}")
-        return None
+from utils import settings
+
+
+def create_connection(user: str, password: str, database: str | None = "__default__"):
+    """Open a connection with explicit credentials (no defaults to root)."""
+    s = settings.db_settings()
+    db = s["database"] if database == "__default__" else database
+    kwargs = dict(host=s["host"], port=s["port"], user=user, password=password)
+    if db:
+        kwargs["database"] = db
+    return mysql.connector.connect(**kwargs)
+
+
+def connect_as(account_key: str, app_user: str | None = None):
+    """Connect with the least-privilege account for a role ('AUTH', 'MANUFACTURER', ...).
+
+    app_user is stored in the session variable @app_user, which the audit triggers record.
+    """
+    user, password = settings.account_credentials(account_key)
+    conn = create_connection(user, password)
+    if app_user is not None:
+        cur = conn.cursor()
+        cur.execute("SET @app_user = %s", (app_user,))
+        cur.close()
+    return conn
+
+
+def connect_admin(database: str | None = "__default__"):
+    user, password = settings.admin_credentials()
+    return create_connection(user, password, database)
+
 
 def execute_stored_procedure(conn, proc_name, params=None):
     """ Execute a stored procedure with given parameters """
+    cursor = None
     try:
         cursor = conn.cursor()
         if params:
@@ -36,30 +55,9 @@ def execute_stored_procedure(conn, proc_name, params=None):
         conn.rollback()
         return None
     finally:
-        cursor.close()
+        if cursor is not None:
+            cursor.close()
 
-def get_data_from_table(conn, table_name, conditions=None):
-    """ Retrieve data from a specific table with optional conditions """
-    try:
-        cursor = conn.cursor()
-        query = f"SELECT * FROM {table_name}"
-        if conditions:
-            query += f" WHERE {conditions}"
-        
-        cursor.execute(query)
-        return cursor.fetchall()
-    except Error as e:
-        print(f"Error retrieving data: {e}")
-        return None
-    finally:
-        cursor.close()
-
-
-# Example: Process order with trigger validation
-def process_order(conn, user_id, product_id, quantity):
-    results = execute_stored_procedure(conn, "ValidateInventory", [product_id, quantity])
-    if results and results[0][0]['has_stock']:
-        execute_stored_procedure(conn, "PlaceOrder", [user_id, product_id, quantity])
-        print("Order placed successfully")
-    else:
-        print("Insufficient stock")
+# Removed: get_data_from_table() built SQL with f-strings from its arguments (table name and
+# WHERE clause), an SQL injection risk, and process_order() called procedures that do not
+# exist. Neither was used anywhere.

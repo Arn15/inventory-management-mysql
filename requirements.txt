@@ -1,3 +1,6 @@
-mysql-connector-python
-PyYAML
-tabulate
+mysql-connector-python>=9.0
+PyYAML>=6.0
+tabulate>=0.9
+bcrypt>=4.0
+python-dotenv>=1.0
+pytest>=8.0

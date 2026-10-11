@@ -1,20 +1,5 @@
+# Non-secret connection settings. Passwords live in .env (see .env.example).
 database:
   host: "127.0.0.1"
   port: 3306
-  username: "inventory_app"
-  password: ""   # set via DB_PASSWORD env var
   database: "InventoryManagement"
-
-init:
-  tables: 
-    location: "data/ddl-tables.sql"
-    enabled: true
-  triggers: 
-    location: "data/ddl-triggers.sql"
-    enabled: true
-  procedures:
-    location: "data/ddl-procedures.sql"
-    enabled: true
-  data: 
-    location: "data/dml-initialise.sql"
-    enabled: true

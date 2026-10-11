@@ -115,8 +115,8 @@ def get_all_product_batches(conn):
                 product_inventory_list.append({
                     'product_lot_number': row['product_lot_number'],
                     'manufacturer_product_id': row['manufacturer_product_id'],
-                    'expiration_date': eval(str(row['expiration_date'])),
-                    'creation_date': eval(str(row['creation_date'])),
+                    'expiration_date': row['expiration_date'],   # was eval(str(...)): code execution on DB data, and turned 2026-11-10 into 2005
+                    'creation_date': row['creation_date'],
                     'quantity': row['quantity'],
                     'product_batch_id': row['product_batch_id']
                 })

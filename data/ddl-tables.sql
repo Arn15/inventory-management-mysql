@@ -1,5 +1,6 @@
 USE `InventoryManagement`;
 
+DROP TABLE IF EXISTS Audit_Log;
 DROP TABLE IF EXISTS Ingredient_Formulation;
 DROP TABLE IF EXISTS Do_Not_Combine;
 DROP TABLE IF EXISTS Recipe;
@@ -33,7 +34,12 @@ CREATE TABLE User
 	user_id VARCHAR(10) PRIMARY KEY,
 	first_name VARCHAR(20),
 	last_name VARCHAR(20),
-	role_code ENUM('MANUFACTURER', 'SUPPLIER', 'VIEWER')
+	role_code ENUM('MANUFACTURER', 'SUPPLIER', 'VIEWER') NOT NULL,
+	-- authentication: bcrypt hash, NULL means no password set and login is refused
+	password_hash VARCHAR(100) NULL,
+	failed_attempts INT NOT NULL DEFAULT 0,
+	locked_until DATETIME NULL,
+	last_login DATETIME NULL
 );
 
 CREATE TABLE Manufacturer (
@@ -149,3 +155,18 @@ CREATE TABLE Ingredient_Formulation (
     FOREIGN KEY (ingredient_id) REFERENCES Ingredients(ingredient_id)
 );
 
+-- Append-only security audit trail. Written by triggers (data changes) and by the
+-- login flow (authentication events). No application account can UPDATE or DELETE it,
+-- and the triggers in ddl-audit.sql reject updates/deletes even from admins.
+CREATE TABLE Audit_Log (
+    audit_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_time DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    app_user VARCHAR(10) NULL,          -- application user (session variable @app_user)
+    db_account VARCHAR(100) NOT NULL,   -- database account that made the change
+    action VARCHAR(30) NOT NULL,        -- INSERT / UPDATE / LOGIN_SUCCESS / LOGIN_FAILED / ...
+    table_name VARCHAR(64) NULL,
+    record_key VARCHAR(255) NULL,
+    details TEXT NULL,
+    INDEX idx_audit_time (event_time),
+    INDEX idx_audit_user (app_user)
+);

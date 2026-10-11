@@ -1,3 +1,5 @@
+-- Seed data. Dates are relative to the day the database is initialised, so the
+-- 90-day ingredient expiry rule keeps accepting the seed lots.
 DELETE FROM Category;
 DELETE FROM Products;
 DELETE FROM Manufacturer;
@@ -21,7 +23,8 @@ INSERT INTO Products VALUES
 (100, 'Steak Dinner', 2),
 (101, 'Mac & Cheese', 3);
 
-INSERT INTO User VALUES
+-- password_hash is set by `python src/manage.py init-db` (bcrypt), never stored in SQL
+INSERT INTO User (user_id, first_name, last_name, role_code) VALUES
 ('MFG001', 'John', 'Smith', 'MANUFACTURER'),
 ('MFG002', 'Alice', 'Lee', 'MANUFACTURER'),
 ('SUP020', 'Jane', 'Doe', 'SUPPLIER'),
@@ -49,7 +52,7 @@ INSERT INTO Ingredients VALUES
 (201, 'Seasoning Blend', TRUE),
 (301, 'Super Seasoning', TRUE);
 
-CALL AddSupplierIngredientVersion(20, 201, '2025-06-30', 20.0, 8.0);
+CALL AddSupplierIngredientVersion(20, 201, DATE_ADD(CURDATE(), INTERVAL 365 DAY), 20.0, 8.0);
 
 INSERT INTO Supplier_Ingredient VALUES
 (2, 20, 101, 1, NULL, NULL, NULL, NULL),
@@ -73,17 +76,17 @@ INSERT INTO Ingredient_Inventory (
     ingredient_batch_id
 )
 VALUES
-('I101-S20-B1',2, 0.1, 1000, 1000, '2026-11-15', CURRENT_DATE(),1),
-('I101-S21-B1',3, 0.08, 800, 800, '2026-10-30', CURRENT_DATE(),1),
-('I101-S20-B2',2, 0.1, 500, 500, '2026-11-01', CURRENT_DATE(),2),
-('I101-S20-B3',2, 0.1, 500, 485, '2026-12-15', CURRENT_DATE(),3),
-('I102-S20-B1',4, 0.3, 1200, 600, '2026-12-15', CURRENT_DATE(),1),
-('I106-S20-B1',5, 0.5, 3000, 3000, '2026-12-15', CURRENT_DATE(),1),
-('I106-S20-B2',5, 0.5, 600, 0, '2026-12-20', CURRENT_DATE(),2),
-('I108-S20-B1',6, 0.25, 1000, 1000, '2026-09-28', CURRENT_DATE(),1),
-('I108-S20-B2',6, 0.25, 6300, 4200, '2026-12-31', CURRENT_DATE(),2),
-('I201-S20-B1',1, 2.5, 100, 100, '2026-11-30', CURRENT_DATE(),1),
-('I201-S20-B2',1, 2.5, 20, 0, '2026-12-30', CURRENT_DATE(),2);
+('I101-S20-B1',2, 0.1, 1000, 1000, DATE_ADD(CURDATE(), INTERVAL 167 DAY), CURRENT_DATE(),1),
+('I101-S21-B1',3, 0.08, 800, 800, DATE_ADD(CURDATE(), INTERVAL 151 DAY), CURRENT_DATE(),1),
+('I101-S20-B2',2, 0.1, 500, 500, DATE_ADD(CURDATE(), INTERVAL 153 DAY), CURRENT_DATE(),2),
+('I101-S20-B3',2, 0.1, 500, 485, DATE_ADD(CURDATE(), INTERVAL 197 DAY), CURRENT_DATE(),3),
+('I102-S20-B1',4, 0.3, 1200, 600, DATE_ADD(CURDATE(), INTERVAL 197 DAY), CURRENT_DATE(),1),
+('I106-S20-B1',5, 0.5, 3000, 3000, DATE_ADD(CURDATE(), INTERVAL 197 DAY), CURRENT_DATE(),1),
+('I106-S20-B2',5, 0.5, 600, 0, DATE_ADD(CURDATE(), INTERVAL 202 DAY), CURRENT_DATE(),2),
+('I108-S20-B1',6, 0.25, 1000, 1000, DATE_ADD(CURDATE(), INTERVAL 119 DAY), CURRENT_DATE(),1),
+('I108-S20-B2',6, 0.25, 6300, 4200, DATE_ADD(CURDATE(), INTERVAL 213 DAY), CURRENT_DATE(),2),
+('I201-S20-B1',1, 2.5, 100, 100, DATE_ADD(CURDATE(), INTERVAL 182 DAY), CURRENT_DATE(),1),
+('I201-S20-B2',1, 2.5, 20, 0, DATE_ADD(CURDATE(), INTERVAL 212 DAY), CURRENT_DATE(),2);
 
 INSERT INTO Product_Inventory(
     product_lot_number,
@@ -93,8 +96,8 @@ INSERT INTO Product_Inventory(
     product_batch_id
 )
 VALUES
-('P100-M101-B1', 100, '2025-11-15', 100, 1),
-('P101-M102-B1', 101, '2025-10-30', 300, 1);
+('P100-M101-B1', 100, DATE_ADD(CURDATE(), INTERVAL 30 DAY), 100, 1),
+('P101-M102-B1', 101, DATE_ADD(CURDATE(), INTERVAL 15 DAY), 300, 1);
 
 INSERT INTO Product_Ingredient_Batch_Mapping VALUES
 ('P100-M101-B1', 'I106-S20-B2'),
